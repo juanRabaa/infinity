@@ -25,7 +25,35 @@ var collisionDetector = {
             return true;
 
         return false;
-    }
+    },
+    //Polygon array of vertices
+    polygonPoint: function(vertices, point){
+        let collision = false;
+
+        // go through each of the vertices, plus
+        // the next vertex in the list
+        let next = 0;
+        for (let current=0; current < vertices.length; current++) {
+
+          // get next vertex in list
+          // if we've hit the end, wrap around to 0
+          next = current+1;
+          if (next == vertices.length) next = 0;
+
+          // get the PVectors at our current position
+          // this makes our if statement a little cleaner
+          let vc = vertices[current];    // c for "current"
+          let vn = vertices[next];       // n for "next"
+
+          // compare position, flip 'collision' variable
+          // back and forth
+          if (((vc.y >= point.y && vn.y < point.y) || (vc.y < point.y && vn.y >= point.y)) &&
+               (point.x < (vn.x-vc.x)*(point.y-vc.y) / (vn.y-vc.y)+vc.x)) {
+                  collision = !collision;
+          }
+        }
+        return collision;
+    },
 }
 
 class Particle{
@@ -103,6 +131,8 @@ class Sensor{
             color: 'lime',
             dontUpdate: false,
             useEndPoint: false,
+            drawPolygon: true,
+            polygonColor: 'rgba(0, 255, 0, 0.5)',
         };
         this.info = Object.assign({}, this.defaults, options);
         this.oldPosition = {
@@ -137,6 +167,7 @@ class Sensor{
         ctx.moveTo(this.info.x, this.info.y);
         ctx.lineTo(endpoint.x, endpoint.y);
         ctx.stroke();
+        this.drawTransitionPolygon(ctx);
     }
 
     update(){
@@ -208,14 +239,55 @@ class Sensor{
         return colliding;
     }
 
+    getTansitionPolygon(){
+        return [{
+            x: this.info.x,
+            y: this.info.y,
+        },{
+            x: this.info.endX,
+            y: this.info.endY,
+        },{
+            x: this.oldPosition.endX,
+            y: this.oldPosition.endY,
+        },{
+            x: this.oldPosition.x,
+            y: this.oldPosition.y,
+        }];
+    }
+
+    drawTransitionPolygon(ctx){
+        let vertices = this.getTansitionPolygon();
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x,vertices[0].y);
+        ctx.lineTo(vertices[1].x,vertices[1].y);
+        ctx.lineTo(vertices[2].x,vertices[2].y);
+        ctx.lineTo(vertices[3].x,vertices[3].y);
+        if(this.info.drawPolygon){
+            ctx.fillStyle = this.info.polygonColor;
+            ctx.fill();
+        }
+    }
+
     checkCollisionWithRect(x, y, width, height, checkInTransition){
         let colliding = false
+
+        if(checkInTransition){
+            let polygon = this.getTansitionPolygon();
+            colliding = collisionDetector.polygonPoint(polygon, {x, y});
+            // if(colliding)
+            //     console.log(colliding);
+        }
+
+        if(colliding)
+            return colliding;
+
         let rect = {
             x: x,
             y: y,
             width: width,
             height: height,
         };
+
         colliding = collisionDetector.lineRect({
             x: this.info.x,
             y: this.info.y,
@@ -223,14 +295,6 @@ class Sensor{
             endY: this.info.endY,
         }, rect);
 
-        if( !colliding && checkInTransition ){
-            colliding = this.checkTransitionCollisionLine({
-                x: this.oldPosition.x,
-                y: this.oldPosition.y,
-                endX: this.oldPosition.endX,
-                endY: this.oldPosition.endY,
-            }, rect);
-        }
         return colliding;
     }
 
@@ -257,7 +321,15 @@ class ParticleCanvas{
             dontUpdate: true,
             useEndPoint: true,
         });
-        this.sensorTime = 100;
+        this.options = {
+            advanceFramesWithKey: false,//True => advances frame when 'a' key is pressed
+            sensorTime: 50,
+            onlyBackground: false,//True => only shows the black cells left behind by the particles
+        };
+        this.states = {
+            advKeyPressed: false,
+            advKeyAvailable: true,
+        };
         console.log(this.sensor);
     }
 
@@ -332,8 +404,10 @@ class ParticleCanvas{
             if(collision){
                 //console.log(collision);
                 particle.replacementParticle.options.dontDraw = false;
-                particle.options.dontDraw = false;
-                particle.options.dontUpdate = false;
+                if( !canvas.options.onlyBackground ){
+                    particle.options.dontDraw = false;
+                    particle.options.dontUpdate = false;
+                }
             }
             particle.draw(canvas.ctx);
         });
@@ -341,6 +415,12 @@ class ParticleCanvas{
 
     draw(){
         //console.log(this.sensor);
+        if( this.options.advanceFramesWithKey && !this.states.advKeyPressed ){
+            return;
+        }
+        this.states.advKeyPressed = false;
+        this.states.advKeyAvailable = false;
+        this.delayCounter = 0;
         this.clear();
         this.drawBackgroundParticles();
         this.drawParticles();
@@ -349,8 +429,8 @@ class ParticleCanvas{
     }
 
     updateSensor(){
-        var endxIncrement = this.canvas.width / this.sensorTime;
-        var yIncrement = this.canvas.height / this.sensorTime;
+        var endxIncrement = this.canvas.width / this.options.sensorTime;
+        var yIncrement = this.canvas.height / this.options.sensorTime;
         var newEndX = this.sensor.info.endX + endxIncrement;
         var newY = this.sensor.info.y - yIncrement;
 
@@ -376,6 +456,14 @@ class ParticleCanvas{
         this.loop();
         $(document).on('resize', function(){
             canvas.resize();
+        });
+        $(document).on('keydown', function(event){
+            if( canvas.states.advKeyAvailable && event.which == 65)
+                canvas.states.advKeyPressed = true;
+        });
+        $(document).on('keyup', function(event){
+            if(event.which == 65)
+                canvas.states.advKeyAvailable = true;
         });
     }
 
