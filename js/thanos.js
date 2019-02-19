@@ -821,10 +821,11 @@ class ThanosEffect{
 
     initialize(){
         var thanoseffect = this;
+        $('html').css('overflow', 'hidden');
         this.portalStep();
 
         setTimeout(function(){
-            $('html').css('overflow', 'hidden');
+            //$('html').css('overflow', 'hidden');
             var promise = thanoseffect.bodyToCanvas();
             promise.then(function(){
                 thanoseffect.appendCanvas();
