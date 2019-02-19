@@ -11,6 +11,7 @@ $(document).ready(function(){
             speed: parseInt($('#particlesSpeed').val()),
             precision: parseInt($('#particlesPrecision').val()),
             debug: $('#thanosDebug').is(':checked'),
+            resetAvailable: $('#thanosReset').is(':checked'),
         }
     }
 

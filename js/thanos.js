@@ -584,7 +584,7 @@ class ThanosEffect{
             speed: 0,
             precision: 20,
             reductionActivated: true,
-            resetAvailable: true,
+            resetAvailable: false,
         };
         this.options = Object.assign({}, this.defaults, options);
 
