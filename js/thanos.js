@@ -54,6 +54,23 @@ var collisionDetector = {
         }
         return collision;
     },
+    trianglePoint: function(x1, y1, x2, y2, x3, y3, px, py){
+        // get the area of the triangle
+        let areaOrig = Math.abs( (x2-x1)*(y3-y1) - (x3-x1)*(y2-y1) );
+
+        // get the area of 3 triangles made between the point
+        // and the corners of the triangle
+        let area1 = Math.abs( (x1-px)*(y2-py) - (x2-px)*(y1-py) );
+        let area2 = Math.abs( (x2-px)*(y3-py) - (x3-px)*(y2-py) );
+        let area3 = Math.abs( (x3-px)*(y1-py) - (x1-px)*(y3-py) );
+
+        // if the sum of the three areas equals the original,
+        // we're inside the triangle!
+        if (area1 + area2 + area3 == areaOrig) {
+            return true;
+        }
+        return false;
+    }
 }
 
 class Particle{
@@ -195,6 +212,21 @@ class Sensor{
         this.info.endX = data.endX;
     }
 
+    checkCollisionBefore(a, b){
+        let x1 = 0;
+        let y1 = this.info.y;
+        let x2 = this.info.endX;
+        let y2 = this.info.endY;
+        let x3 = 0;
+        let y3 = this.info.endY;
+        let collision = false;
+
+        if( collisionDetector.trianglePoint(x1, y1, x2, y2, x3, y3, a, b) )
+            collision = true;
+
+        return collision;
+    }
+
     checkTransitionCollisionLine(x, y, endX, endY){
         let sideA = {x: this.info.x, y: this.info.y, endX: this.oldPosition.x, endY: this.oldPosition.y};
         let sideB = {x: this.info.x, y: this.info.y, endX: this.info.endX, endY: this.info.endY};
@@ -294,6 +326,13 @@ class Sensor{
             endX: this.info.endX,
             endY: this.info.endY,
         }, rect);
+
+        if(colliding)
+            return colliding;
+
+        //If it hasnt collided in the previous checks, lets see in the traingle
+        //area formed by the sensor and the canvas
+        colliding = this.checkCollisionBefore(x, y);
 
         return colliding;
     }
