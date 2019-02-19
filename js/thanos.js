@@ -147,6 +147,7 @@ class Sensor{
             length: 10,
             color: 'lime',
             dontUpdate: false,
+            dontDraw: false,
             useEndPoint: false,
             drawPolygon: true,
             polygonColor: 'rgba(0, 255, 0, 0.5)',
@@ -178,6 +179,9 @@ class Sensor{
     }
 
     draw(ctx){
+        if(this.info.dontDraw)
+            return;
+
         let endpoint = this.getEndPoint();
         ctx.strokeStyle = this.info.color;
         ctx.beginPath();
@@ -302,33 +306,33 @@ class Sensor{
 
     checkCollisionWithRect(x, y, width, height, checkInTransition){
         let colliding = false
-
-        if(checkInTransition){
-            let polygon = this.getTansitionPolygon();
-            colliding = collisionDetector.polygonPoint(polygon, {x, y});
-            // if(colliding)
-            //     console.log(colliding);
-        }
-
-        if(colliding)
-            return colliding;
-
-        let rect = {
-            x: x,
-            y: y,
-            width: width,
-            height: height,
-        };
-
-        colliding = collisionDetector.lineRect({
-            x: this.info.x,
-            y: this.info.y,
-            endX: this.info.endX,
-            endY: this.info.endY,
-        }, rect);
-
-        if(colliding)
-            return colliding;
+        // 
+        // if(checkInTransition){
+        //     let polygon = this.getTansitionPolygon();
+        //     colliding = collisionDetector.polygonPoint(polygon, {x, y});
+        //     // if(colliding)
+        //     //     console.log(colliding);
+        // }
+        //
+        // if(colliding)
+        //     return colliding;
+        //
+        // let rect = {
+        //     x: x,
+        //     y: y,
+        //     width: width,
+        //     height: height,
+        // };
+        //
+        // colliding = collisionDetector.lineRect({
+        //     x: this.info.x,
+        //     y: this.info.y,
+        //     endX: this.info.endX,
+        //     endY: this.info.endY,
+        // }, rect);
+        //
+        // if(colliding)
+        //     return colliding;
 
         //If it hasnt collided in the previous checks, lets see in the traingle
         //area formed by the sensor and the canvas
@@ -344,12 +348,28 @@ class Sensor{
 
 
 class ParticleCanvas{
-    constructor(id){
+    constructor(id, config){
         this.id = id;
         this.particles = [];
         this.destroyedParticles = [];
         this.replacements = [];
         this.setUpCanvas();
+        this.options = {
+            advanceFramesWithKey: false,//True => advances frame when 'a' key is pressed
+            sensorDuration: 50,
+            onlyBackground: false,//True => only shows the black cells left behind by the particles
+            debug: false,
+        };
+        this.options = Object.assign({}, this.options, config);
+        this.setUpSensor();
+        this.states = {
+            advKeyPressed: false,
+            advKeyAvailable: true,
+        };
+        console.log(this.sensor);
+    }
+
+    setUpSensor(){
         this.sensor = new Sensor({
             x: 0,
             y: this.canvas.height,
@@ -358,18 +378,9 @@ class ParticleCanvas{
             speed: 0,
             color: 'lime',
             dontUpdate: true,
+            dontDraw: !this.options.debug,
             useEndPoint: true,
         });
-        this.options = {
-            advanceFramesWithKey: false,//True => advances frame when 'a' key is pressed
-            sensorTime: 50,
-            onlyBackground: false,//True => only shows the black cells left behind by the particles
-        };
-        this.states = {
-            advKeyPressed: false,
-            advKeyAvailable: true,
-        };
-        console.log(this.sensor);
     }
 
     //Crea el canvas y guarda el context 2d
@@ -405,6 +416,7 @@ class ParticleCanvas{
         });
         var backgroundParticle = new Particle(data.x, data.y, data.w, data.h, backgroundData);
         particle.replacementParticle = backgroundParticle;
+        particle.frontParticle = particle;
         this.particles.push(particle);
         this.replacements.push(backgroundParticle);
     }
@@ -453,13 +465,13 @@ class ParticleCanvas{
     }
 
     draw(){
-        //console.log(this.sensor);
+        //Key
         if( this.options.advanceFramesWithKey && !this.states.advKeyPressed ){
             return;
         }
         this.states.advKeyPressed = false;
         this.states.advKeyAvailable = false;
-        this.delayCounter = 0;
+        //Draw
         this.clear();
         this.drawBackgroundParticles();
         this.drawParticles();
@@ -468,8 +480,8 @@ class ParticleCanvas{
     }
 
     updateSensor(){
-        var endxIncrement = this.canvas.width / this.options.sensorTime;
-        var yIncrement = this.canvas.height / this.options.sensorTime;
+        var endxIncrement = this.canvas.width / this.options.sensorDuration;
+        var yIncrement = this.canvas.height / this.options.sensorDuration;
         var newEndX = this.sensor.info.endX + endxIncrement;
         var newY = this.sensor.info.y - yIncrement;
 
@@ -486,9 +498,7 @@ class ParticleCanvas{
         //  $canvas.outerHeight($(window).height()-$canvas.offset().top- Math.abs($canvas.outerHeight(true) - $canvas.outerHeight()));
     }
 
-    resize(){
-
-    }
+    resize(){}
 
     initialize(){
         var canvas = this;
@@ -518,11 +528,11 @@ class Bitmap{
         this.currentY = y;
         this.currentX = x;
         this.precision = precision;
-        this.speed = 10;
-        this.stepsBitmapData = {};
+        this.bitmapCreated = false;
     }
 
-    createBitmap(canvas, zoneData){
+    createBitmap(canvas, zoneData, callback){
+        this.bitmapCreated = false;
         this.bitmap = [];
         var ctx = canvas.getContext('2d');
         var width = canvas.width;
@@ -535,8 +545,9 @@ class Bitmap{
         var currentRowY = (zoneData.y + zoneData.height);
         var currentColumnsX = zoneData.x;
 
-        for( var y = (zoneData.y + zoneData.height); y >= zoneData.y; y -= this.precision ){
+        for( var y = (zoneData.y + zoneData.height); y >= (zoneData.y - this.precision); y -= this.precision ){
             for( var x = zoneData.x; x <= (zoneData.x + zoneData.width); x += this.precision ){
+                //console.log(y);
                 var bitData = {
                     x: x - zoneData.x,
                     y: y - zoneData.y,
@@ -554,138 +565,12 @@ class Bitmap{
         }
 
         console.log(this.bitmap);
-        return bitmap
+        this.bitmapCreated = true;
+        return this.bitmap;
     }
 
-    stepsBitmapEnded(){
-        return this.stepsBitmapData && (this.stepsBitmapData.endX || !this.stepsBitmapData.animatingColumns)
-         && (this.stepsBitmapData.endY || !this.stepsBitmapData.animatingRows);
-    }
-
-    stepsBitmap(canvas, zoneData, options){
-        this.stepsBitmapDefaults = {
-            speed: 0,
-            animateColumns: true,
-            animateRows: true,
-            callback: null,
-        };
-        this.stepsBitmapOptions = Object.assign({}, this.stepsBitmapDefaults, options);
-
-        this.stepsBitmapData = {};
-        this.stepsBitmapData.speed = this.stepsBitmapOptions.speed;
-        this.stepsBitmapData.iterationRate = 0.5;
-        this.stepsBitmapData.bitmap = [];
-        var ctx = canvas.getContext('2d');
-        var width = canvas.width;
-        var height = canvas.height;
-
-        this.stepsBitmapData.currentRowY = (zoneData.y + zoneData.height);
-        this.stepsBitmapData.currentColumnsX = zoneData.x;
-
-        this.stepsBitmapData.animatingColumns = this.stepsBitmapOptions.animateColumns;
-        this.stepsBitmapData.animatingRows = this.stepsBitmapOptions.animateRows;
-
-        if(this.stepsBitmapData.animatingColumns)
-            this.stepLineX(this.stepsBitmapData.currentColumnsX, zoneData.width, zoneData.y, this.stepsBitmapData.currentRowY, ctx, zoneData, this.stepsBitmapOptions.callback, true);
-        if(this.stepsBitmapData.animatingRows)
-            this.stepLineY(this.stepsBitmapData.currentRowY - this.precision, zoneData.y, zoneData.width, 0, ctx, zoneData, this.stepsBitmapOptions.callback, true);
-    }
-
-    stepLineX(currentX, maxX, minY, currentIterationY, ctx, zoneData, callback, canCallOther){
-        //console.log(currentX, maxX, minY, currentIterationY, zoneData, canCallOther);
-        var bitData = {
-            x: currentX - zoneData.x,
-            y: currentIterationY - zoneData.y,
-            precision: this.precision,
-            data: ctx.getImageData(currentX, currentIterationY, this.precision, this.precision).data,
-        };
-        //console.log(bitData);
-        this.stepsBitmapData.bitmap.push(bitData);
-
-        if(callback){
-            callback(bitData);
-        }
-
-        var _this = this;
-        //Mientras mas chico sea el numbero por el que se divide zoneData.height, mas rapido ocurren las transiciones en X
-        var isHalfWay = ((currentIterationY - zoneData.y) <= zoneData.height/2) || (Math.random() >= this.stepsBitmapData.iterationRate);
-        var columnFinished = currentIterationY < minY;
-        var isLastColumn = currentX >= maxX;
-        var newRowIterationCondition = isHalfWay && canCallOther;
-
-        //Si no se termino de animar las particulas de esta columna, animar la siguiente
-        if( !columnFinished ){
-            //Quitar otra particula de la misma columna
-            setTimeout(function(currentX, maxX, minY, currentIterationY, ctx, zoneData, callback, isHalfWay){
-                _this.stepLineX(currentX, maxX, minY, currentIterationY, ctx, zoneData, callback, !isHalfWay);
-            }, this.stepsBitmapData.speed, currentX, maxX, minY, currentIterationY - this.precision, ctx, zoneData, callback, isHalfWay);
-        }
-
-        //console.log(currentX, maxX)
-        //Si no estamos en la ultima columna
-        if(!isLastColumn){
-            //Si va por la mitad, y esta accion no se realizo en esta iteracion
-            //empezar a restar de la siguiente columna
-            if( newRowIterationCondition ){
-                this.stepsBitmapData.currentColumnsX += this.precision;//console.log(this.currentColumnsY)
-                this.stepLineX(this.stepsBitmapData.currentColumnsX, maxX, minY, this.stepsBitmapData.currentRowY, ctx, zoneData, callback, true);
-            }
-        }
-
-        //Si se animaron todas las particulas de la columna, y no fue posible animar otra columna
-        //Terminamos el X
-        if( columnFinished && !newRowIterationCondition ){
-            this.stepsBitmapData.endX = true;
-        }
-    }
-
-    stepLineY(currentRowY, minY, maxX, currentIterationX, ctx, zoneData, callback, canCallOther){
-        //console.log(currentRowY, minY, maxX, currentIterationX, zoneData, canCallOther);
-        var bitData = {
-            x: currentIterationX - zoneData.x,
-            y: currentRowY - zoneData.y,
-            precision: this.precision,
-            data: ctx.getImageData(currentIterationX, currentRowY, this.precision, this.precision).data,
-        };
-
-        //console.log(bitData);
-        this.stepsBitmapData.bitmap.push(bitData);
-        if(callback){
-            callback(bitData);
-        }
-
-        var _this = this;
-        //Mientras mas grande sea el numbero por el que se divide zoneData.width, mas rapido ocurren las transiciones en Y
-        var isHalfWay = ((currentIterationX + zoneData.x) >= zoneData.width/2) || (Math.random() >= this.stepsBitmapData.iterationRate);
-        var rowFinished = currentIterationX > maxX;
-        var isLastRow = currentRowY < minY;
-        var newRowIterationCondition = isHalfWay && canCallOther;
-
-        //Si no se termino de animar las particulas de esta columna, animar la siguiente
-        if(!rowFinished){
-            //Quitar otra particula de la misma fila
-            setTimeout(function(currentRowY, minY, maxX, currentIterationX, ctx, zoneData, callback, isHalfWay){
-                _this.stepLineY(currentRowY, minY, maxX, currentIterationX, ctx, zoneData, callback, !isHalfWay);
-            }, this.speed, currentRowY, minY, maxX, currentIterationX + this.precision, ctx, zoneData, callback, isHalfWay);
-        }
-
-        //console.log(isLastRow, newRowIterationCondition)
-        //Si no estamos en la ultima fila
-        if(!isLastRow){
-            //Si va por la mitad, y esta accion no se realizo en esta iteracion
-            //empezar a restar de la siguiente fila
-            if( newRowIterationCondition ){
-                this.stepsBitmapData.currentRowY -= this.precision;
-                this.stepLineY(this.stepsBitmapData.currentRowY, minY, maxX, this.stepsBitmapData.currentColumnsX, ctx, zoneData, callback, true);
-            }
-        }
-        //console.log(this.endY, this.endX);
-        //Si se animaron todas las particulas de la fila, y no fue posible animar otra fila
-        //Terminamos el Y
-        //console.log(rowFinished, !newRowIterationCondition);
-        if( rowFinished && !newRowIterationCondition ){
-            this.stepsBitmapData.endY = true;
-        }
+    bitmapEnded(){
+        return this.bitmapCreated;
     }
 }
 
@@ -694,8 +579,6 @@ class ThanosEffect{
         this.defaults = {
             speed: 0,
             precision: 20,
-            animateColumns: true,
-            animateRows: true,
             reductionActivated: true,
         };
         this.options = Object.assign({}, this.defaults, options);
@@ -703,18 +586,18 @@ class ThanosEffect{
         this.id = id;
         this.particles = [];
         this.precision = this.options.precision;
-        this.particleCanvas = new ParticleCanvas(id);
+        this.particleCanvas = new ParticleCanvas(id, this.options);
         this.speed = this.options.speed;
         this.messages = ['Your page will return'/*, 'Your page will return cuando la pagues'*/];
         this.$thanosGuantletHtml = $(`<div id="thanos-guantlet">
-            	<img src="https://www.vetorial.net/~centurion/Thanos.gif">
+            	<img src="assets/img/thanos-attacks.gif">
             </div>`);
         this.$thanosMessageHtml = $(`<div id="thanos-message">
                 <div class="text">${this.getRandomMessage()}</div>
-                <img class="thanos-end-image" src="https://vignette.wikia.nocookie.net/marvelvscapcom/images/f/fa/Thanos-wins.gif/revision/latest?cb=20150409050450">
+                <img class="thanos-end-image" src="assets/img/thanos-wins.gif">
             </div>`);
         this.$portalHtml = $(`<div id="portal-image">
-        	<img class="img-fluid portal-img" src="https://steamusercontent-a.akamaihd.net/ugc/915794937505568927/8BC71D6A226D3448CCE1733335F526CD72BDA998/?interpolation=lanczos-none&amp;output-format=jpeg&amp;output-quality=95&amp;fit=inside%7C1024%3A1024&amp;composite-to=*,*%7C1024%3A1024&amp;background-color=black">
+        	<img class="img-fluid portal-img" src="assets/img/portal.gif">
         </div>`);
 
         console.log(this.particleCanvas);
@@ -728,24 +611,7 @@ class ThanosEffect{
 
     createBitmap(callback){
         this.bitmap = new Bitmap(0,0,this.precision);
-        console.log(this.options)
-        this.bitmap.stepsBitmap(this.screenshotCanvas, this.particleCanvas.canvasInfo(),{
-            speed: this.speed,
-            callback: callback,
-            animateColumns: this.options.animateColumns,
-            animateRows: this.options.animateRows,
-        });
-    }
-
-    createStepsBitmap(callback){
-        this.bitmap = new Bitmap(0,0,this.precision);
-        console.log(this.options);
-        this.bitmap.stepsBitmap(this.screenshotCanvas, this.particleCanvas.canvasInfo(),{
-            speed: this.speed,
-            callback: callback,
-            animateColumns: this.options.animateColumns,
-            animateRows: this.options.animateRows,
-        });
+        this.bitmap.createBitmap(this.screenshotCanvas, this.particleCanvas.canvasInfo(), callback);
     }
 
     bodyToCanvas(){
@@ -820,8 +686,9 @@ class ThanosEffect{
 
     manageSensorBitdata(bitData){
         //console.log(bitData)
-        var speedX = Math.random() * 5 + 2;
-        var speedY = -1 * (Math.random() * 10 + 2);
+        var speedMultiplier = this.options.speed / 1000;
+        var speedX = (Math.random() * 5 + 2) * speedMultiplier;
+        var speedY = (-1 * (Math.random() * 10 + 2)) * speedMultiplier;
         var reductionRatio = Math.random() * bitData.precision/10 + 0.5;
         //console.log(reductionRatio);
         this.particleCanvas.addParticle({
@@ -839,37 +706,17 @@ class ThanosEffect{
         });
     }
 
-    manageStepsBitdata(bitData){
-        //console.log(bitData)
-        var speedX = Math.random() * 5 + 2;
-        var speedY = -1 * (Math.random() * 10 + 2);
-        var reductionRatio = Math.random() * bitData.precision/10 + 0.5;
-        //console.log(reductionRatio);
-        this.particleCanvas.addParticle({
-            x: bitData.x,
-            y: bitData.y,
-            w: bitData.precision,
-            h: bitData.precision,
-            sx: speedX,
-            sy: speedY,
-            reductionRatio: reductionRatio,
-            reductionActivated: true,
-            color: `rgb(${bitData.data[0]},${bitData.data[1]},${bitData.data[2]})`,
-        });
-    }
-
     initialize(){
         var thanoseffect = this;
         $('html').css('overflow', 'hidden');
         this.portalStep();
 
         setTimeout(function(){
-            //$('html').css('overflow', 'hidden');
             var promise = thanoseffect.bodyToCanvas();
             promise.then(function(){
                 thanoseffect.appendCanvas();
                 thanoseffect.particleCanvas.initialize();
-                thanoseffect.createStepsBitmap( function(bitData){
+                thanoseffect.createBitmap( function(bitData){
                     thanoseffect.manageSensorBitdata(bitData);
                 });
             });
@@ -877,7 +724,7 @@ class ThanosEffect{
 
         //Checkeamos en un intervalo si termino la animacion del bitmap
         this.thanosMessageInterval = setInterval(function(){
-            if(thanoseffect.bitmap && thanoseffect.bitmap.stepsBitmapEnded()){
+            if(thanoseffect.bitmap && thanoseffect.bitmap.bitmapEnded()){
                 //Si termino, limpiamos el intervalo
                 clearInterval(thanoseffect.thanosMessageInterval);
                 setTimeout(function(){//Y pasamos al step del mensaje
@@ -888,22 +735,3 @@ class ThanosEffect{
         }, 100);
     }
 }
-
-
-function run(options){
-    var test = new ThanosEffect('thanosTest', options);
-    test.initialize();
-    console.log(test);
-}
-
-$(document).ready(function(){
-    var thanosActivated = false;
-    $('.content-box').click(function(){
-        if( !thanosActivated ){
-            run({
-                speed: 0,
-                precision: 20,
-            });
-        }
-    });
-});

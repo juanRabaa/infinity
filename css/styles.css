@@ -12,6 +12,7 @@
 
 #main-content {
     padding: 3rem 0;
+    padding-top: 0;
 }
 
 .box-image {
@@ -142,4 +143,117 @@
 #thanos-message.active {
     opacity: 1;
     padding-bottom: 2rem;
+}
+
+/* ========================================================================== */
+/* Config panel */
+/* ========================================================================== */
+#thanos-config {
+    width: 100%;
+    margin-bottom: 3rem;
+}
+
+#thanos-config .config-inputs {
+    /* margin-bottom: 3rem; */
+    background-color: #f9f9f9;
+    /* color: #ffffff; */
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    /* border-top: solid 2px #cf4b98; */
+    border-bottom: solid 2px #cf4b98;
+    display: none;
+}
+
+.trigger-button {
+    height: 2rem;
+    width: 2rem;
+    border-radius: 50%;
+    background-color: #cf4b98;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-bottom: 3rem;
+    margin-top: 3rem;
+}
+/*
+.trigger-button:before {
+    content: "";
+    width: 3rem;
+    height: 3rem;
+    display: block;
+    border-color: #cf4b98;
+    border-radius: 50%;
+    border: solid 1px #cf4b98;
+    animation: pulse 1s infinite;
+    animation-timing-function: linear;
+}*/
+
+
+@keyframes pulse {
+  0% {
+    width: 2rem;
+    height: 2rem;
+    opacity: 1;
+  }
+  25% {
+    width: 3rem;
+    height: 3rem;
+    opacity: 0.75;
+  }
+  50% {
+    width: 4rem;
+    height: 4rem;
+    opacity: 0.5;
+  }
+  75% {
+    width: 5rem;
+    height: 5rem;
+    opacity: 0.25;
+  }
+  100% {
+    width: 6rem;
+    height: 6rem;
+    opacity: 0;
+  }
+}
+
+
+.trigger-button .pulse {
+    width: 3rem;
+    height: 3rem;
+    display: block;
+    border-color: #cf4b98;
+    border-radius: 50%;
+    border: solid 1px #cf4b98;
+    animation: pulse 2s infinite;
+    animation-timing-function: linear;
+    position: absolute;
+}
+
+.trigger-button .pulse:nth-child(2){
+  animation-delay: 0.8s;
+}
+
+.trigger-button .pulse:nth-child(3){
+  animation-delay: 0.65s;
+}
+
+.trigger-button .pulse:nth-child(4){
+  animation-delay: 0.50s;
+}
+
+.trigger-button .pulse:nth-child(5){
+  animation-delay: 0.4s;
+}
+
+.trigger-button:before {
+    height: 1rem;
+    width: 1rem;
+    content: "";
+    display: block;
+    background-color: #ffffff;
+    border-radius: 50%;
 }
