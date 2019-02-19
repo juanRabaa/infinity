@@ -1,8 +1,40 @@
+var collisionDetector = {
+    lineLine: function(lineA, lineB){
+        let colliding = false;
+        let uA = ((lineB.endX-lineB.x)*(lineA.y-lineB.y) - (lineB.endY-lineB.y)*(lineA.x-lineB.x)) / ((lineB.endY-lineB.y)*(lineA.endX-lineA.x) - (lineB.endX-lineB.x)*(lineA.endY-lineA.y));
+        let uB = ((lineA.endX-lineA.x)*(lineA.y-lineB.y) - (lineA.endY-lineA.y)*(lineA.x-lineB.x)) / ((lineB.endY-lineB.y)*(lineA.endX-lineA.x) - (lineB.endX-lineB.x)*(lineA.endY-lineA.y));
+        // if uA and uB are between 0-1, lines are colliding
+        if (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1)
+          colliding = true;
+
+        return colliding;
+    },
+    lineRect: function(line, rect){
+        let leftSide =   {x: rect.x, y: rect.y, endX: rect.x, endY: rect.y + rect.height};
+        let rightSide =  {x: rect.x + rect.width, y: rect.y, endX: rect.x, endY: rect.y + rect.height};
+        let topSide =    {x: rect.x, y: rect.y, endX: rect.x + rect.width, endY: rect.y + rect.height};
+        let bottomSide = {x: rect.x, y: rect.y + rect.height, endX: rect.x + rect.width, endY: rect.y};
+
+        if( this.lineLine(line, leftSide) )
+            return true;
+        if( this.lineLine(line, rightSide) )
+            return true;
+        if( this.lineLine(line, topSide) )
+            return true;
+        if( this.lineLine(line, bottomSide) )
+            return true;
+
+        return false;
+    }
+}
+
 class Particle{
     constructor(x, y, w, h, options){
         this.defaults = {
             sx: 0,
             sy: 0,
+            dontUpdate: false,
+            dontDraw: false,
             color: 'black',
             reductionRatio: 0,
             reductionActivated: false,
@@ -19,12 +51,17 @@ class Particle{
     }
 
     draw(ctx){
+        if( this.options.dontDraw )
+            return;
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
         this.update();
     }
 
     update(){
+        if( this.options.dontUpdate )
+            return;
+
         this.updateReductionStatus();
         this.x += this.sx;
         this.y += this.sy;
@@ -53,34 +90,154 @@ class Particle{
     }
 }
 
-// class Sensor{
-//     constructor(options){
-//         this.defaults = {
-//             x: 0,
-//             y: 0,
-//             speed: 1,
-//             angle: 45,
-//             length: 10,
-//             color: 'lime',
-//         };
-//         this.info = Object.assign({}, this.defaults, options);
-//     }
-//
-//     draw(ctx){
-//         ctx.strokeStyle = this.info.color;
-//         ctx.beginPath();
-//         ctx.moveTo(this.info.x, this.info.y);
-//         ctx.lineTo(this.info.x, this.info.y);
-//         ctx.stroke();
-//     }
-//
-//     update(){
-//         this.updateReductionStatus();
-//         this.x += this.sx;
-//         this.y += this.sy;
-//     }
-//
-// }
+class Sensor{
+    constructor(options){
+        this.defaults = {
+            x: 0,
+            y: 0,
+            endX: 0,
+            endY: 0,
+            speed: 1,
+            angle: 45,
+            length: 10,
+            color: 'lime',
+            dontUpdate: false,
+            useEndPoint: false,
+        };
+        this.info = Object.assign({}, this.defaults, options);
+        this.oldPosition = {
+            x: this.info.x,
+            y: this.info.y,
+            endX: this.info.endX,
+            endY: this.info.endY,
+        }
+    }
+
+    getEndPoint(){
+        let endpoint = null;
+        if ( this.info.useEndPoint ){
+            endpoint = {
+                x: this.info.endX,
+                y: this.info.endY,
+            };
+        }
+        else {
+            endpoint = {
+                x: Math.sin( this.info.angle ) * this.info.length,
+                y: Math.cos( this.info.angle ) * this.info.length,
+            };
+        }
+        return endpoint;
+    }
+
+    draw(ctx){
+        let endpoint = this.getEndPoint();
+        ctx.strokeStyle = this.info.color;
+        ctx.beginPath();
+        ctx.moveTo(this.info.x, this.info.y);
+        ctx.lineTo(endpoint.x, endpoint.y);
+        ctx.stroke();
+    }
+
+    update(){
+        if( !this.info.dontUpdate )
+            return;
+        this.x += this.sx;
+        this.y += this.sy;
+        if ( this.info.useEndPoint ){
+            this.endX += this.sx;
+            this.endY += this.sy;
+        }
+    }
+
+    changePosition(data){
+        this.oldPosition = {
+            x: this.info.x,
+            y: this.info.y,
+            endX: this.info.endX,
+            endY: this.info.endY,
+        }
+
+        this.info.x = data.x;
+        this.info.y = data.y;
+        this.info.endY = data.endY;
+        this.info.endX = data.endX;
+    }
+
+    checkTransitionCollisionLine(x, y, endX, endY){
+        let sideA = {x: this.info.x, y: this.info.y, endX: this.oldPosition.x, endY: this.oldPosition.y};
+        let sideB = {x: this.info.x, y: this.info.y, endX: this.info.endX, endY: this.info.endY};
+        let sideC = {x: this.oldPosition.x, y: this.oldPosition.y, endX: this.oldPosition.endX, endY: this.oldPosition.endY};
+        let sideD = {x: this.oldPosition.endX, y: this.oldPosition.endY, endX: this.info.endX, endY: this.info.endY};
+        let line = {
+            x: x,
+            y: y,
+            endX: endX,
+            endY: endY,
+        };
+
+        if( collisionDetector.lineLine(line,sideA) )
+            return true;
+        if( collisionDetector.lineLine(line,sideB) )
+            return true;
+        if( collisionDetector.lineLine(line,sideC) )
+            return true;
+        if( collisionDetector.lineLine(line,sideD) )
+            return true;
+
+        return false;
+    }
+
+    checkCollisionWithLine(x, y, endX, endY, checkInTransition){
+        let colliding = false;
+        colliding = collisionDetector.lineLine({
+            x: this.info.x,
+            y: this.info.y,
+            endX: this.info.endX,
+            endY: this.info.endY,
+        }, {
+            x: x,
+            y: y,
+            endX: endX,
+            endY: endY,
+        });
+
+        if( !colliding && checkInTransition )
+            colliding = this.checkTransitionCollisionLine(x, y, endX, endY);
+
+        return colliding;
+    }
+
+    checkCollisionWithRect(x, y, width, height, checkInTransition){
+        let colliding = false
+        let rect = {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+        };
+        colliding = collisionDetector.lineRect({
+            x: this.info.x,
+            y: this.info.y,
+            endX: this.info.endX,
+            endY: this.info.endY,
+        }, rect);
+
+        if( !colliding && checkInTransition ){
+            colliding = this.checkTransitionCollisionLine({
+                x: this.oldPosition.x,
+                y: this.oldPosition.y,
+                endX: this.oldPosition.endX,
+                endY: this.oldPosition.endY,
+            }, rect);
+        }
+        return colliding;
+    }
+
+    setInfo(newInfo){
+        this.info = Object.assign({}, this.info, newInfo);
+    }
+}
 
 
 class ParticleCanvas{
@@ -90,6 +247,18 @@ class ParticleCanvas{
         this.destroyedParticles = [];
         this.replacements = [];
         this.setUpCanvas();
+        this.sensor = new Sensor({
+            x: 0,
+            y: this.canvas.height,
+            endX: 0,
+            endY: this.canvas.height,
+            speed: 0,
+            color: 'lime',
+            dontUpdate: true,
+            useEndPoint: true,
+        });
+        this.sensorTime = 100;
+        console.log(this.sensor);
     }
 
     //Crea el canvas y guarda el context 2d
@@ -105,7 +274,6 @@ class ParticleCanvas{
             left: 0,
         });
         //console.log(document.body.clientWidth, window.innerHeight);
-
     }
 
     canvasInfo(){
@@ -119,11 +287,13 @@ class ParticleCanvas{
 
     addParticle( data ){
         var particle = new Particle(data.x, data.y, data.w, data.h, data);
-        var backgroundParticle = new Particle(data.x, data.y, data.w, data.h, {
+        var backgroundData = Object.assign({}, data, {
             sx: 0,
             sy: 0,
             color: 'black',
         });
+        var backgroundParticle = new Particle(data.x, data.y, data.w, data.h, backgroundData);
+        particle.replacementParticle = backgroundParticle;
         this.particles.push(particle);
         this.replacements.push(backgroundParticle);
     }
@@ -158,20 +328,43 @@ class ParticleCanvas{
                 canvas.destroyParticle(particle, index);
                 return;
             }
-
+            let collision = canvas.sensor.checkCollisionWithRect(particle.x, particle.y, particle.width, particle.height, true);
+            if(collision){
+                //console.log(collision);
+                particle.replacementParticle.options.dontDraw = false;
+                particle.options.dontDraw = false;
+                particle.options.dontUpdate = false;
+            }
             particle.draw(canvas.ctx);
         });
     }
 
     draw(){
+        //console.log(this.sensor);
         this.clear();
         this.drawBackgroundParticles();
         this.drawParticles();
+        this.sensor.draw(this.ctx);
+        this.updateSensor();
     }
 
-    upate(){
-        var $canvas = this.$canvas;
-         $canvas.outerHeight($(window).height()-$canvas.offset().top- Math.abs($canvas.outerHeight(true) - $canvas.outerHeight()));
+    updateSensor(){
+        var endxIncrement = this.canvas.width / this.sensorTime;
+        var yIncrement = this.canvas.height / this.sensorTime;
+        var newEndX = this.sensor.info.endX + endxIncrement;
+        var newY = this.sensor.info.y - yIncrement;
+
+        this.sensor.changePosition({
+            x: 0,
+            y: newY,
+            endX: newEndX,
+            endY: this.canvas.height,
+        });
+    }
+
+    update(){
+        // var $canvas = this.$canvas;
+        //  $canvas.outerHeight($(window).height()-$canvas.offset().top- Math.abs($canvas.outerHeight(true) - $canvas.outerHeight()));
     }
 
     resize(){
@@ -406,9 +599,20 @@ class ThanosEffect{
         return message;
     }
 
-    createStepsBitmap(callback){
+    createBitmap(callback){
         this.bitmap = new Bitmap(0,0,this.precision);
         console.log(this.options)
+        this.bitmap.stepsBitmap(this.screenshotCanvas, this.particleCanvas.canvasInfo(),{
+            speed: this.speed,
+            callback: callback,
+            animateColumns: this.options.animateColumns,
+            animateRows: this.options.animateRows,
+        });
+    }
+
+    createStepsBitmap(callback){
+        this.bitmap = new Bitmap(0,0,this.precision);
+        console.log(this.options);
         this.bitmap.stepsBitmap(this.screenshotCanvas, this.particleCanvas.canvasInfo(),{
             speed: this.speed,
             callback: callback,
@@ -487,6 +691,46 @@ class ThanosEffect{
         }, 500);
     }
 
+    manageSensorBitdata(bitData){
+        //console.log(bitData)
+        var speedX = Math.random() * 5 + 2;
+        var speedY = -1 * (Math.random() * 10 + 2);
+        var reductionRatio = Math.random() * bitData.precision/10 + 0.5;
+        //console.log(reductionRatio);
+        this.particleCanvas.addParticle({
+            x: bitData.x,
+            y: bitData.y,
+            w: bitData.precision,
+            h: bitData.precision,
+            sx: speedX,
+            sy: speedY,
+            reductionRatio: reductionRatio,
+            reductionActivated: true,
+            color: `rgb(${bitData.data[0]},${bitData.data[1]},${bitData.data[2]})`,
+            dontUpdate: true,
+            dontDraw: true,
+        });
+    }
+
+    manageStepsBitdata(bitData){
+        //console.log(bitData)
+        var speedX = Math.random() * 5 + 2;
+        var speedY = -1 * (Math.random() * 10 + 2);
+        var reductionRatio = Math.random() * bitData.precision/10 + 0.5;
+        //console.log(reductionRatio);
+        this.particleCanvas.addParticle({
+            x: bitData.x,
+            y: bitData.y,
+            w: bitData.precision,
+            h: bitData.precision,
+            sx: speedX,
+            sy: speedY,
+            reductionRatio: reductionRatio,
+            reductionActivated: true,
+            color: `rgb(${bitData.data[0]},${bitData.data[1]},${bitData.data[2]})`,
+        });
+    }
+
     initialize(){
         var thanoseffect = this;
         this.portalStep();
@@ -498,22 +742,7 @@ class ThanosEffect{
                 thanoseffect.appendCanvas();
                 thanoseffect.particleCanvas.initialize();
                 thanoseffect.createStepsBitmap( function(bitData){
-                    //console.log(bitData)
-                    var speedX = Math.random() * 5 + 2;
-                    var speedY = -1 * (Math.random() * 10 + 2);
-                    var reductionRatio = Math.random() * bitData.precision/10 + 0.5;
-                    //console.log(reductionRatio);
-                    thanoseffect.particleCanvas.addParticle({
-                        x: bitData.x,
-                        y: bitData.y,
-                        w: bitData.precision,
-                        h: bitData.precision,
-                        sx: speedX,
-                        sy: speedY,
-                        reductionRatio: reductionRatio,
-                        reductionActivated: true,
-                        color: `rgb(${bitData.data[0]},${bitData.data[1]},${bitData.data[2]})`,
-                    });
+                    thanoseffect.manageSensorBitdata(bitData);
                 });
             });
         }, 2000);
