@@ -145,6 +145,24 @@
     padding-bottom: 2rem;
 }
 
+#thanos-message #reset-button {
+    position: absolute;
+    bottom: 2rem;
+    background-color: #6070e0;
+    background-color: #000000;
+    border: solid 6px #f0c060;
+    padding: 1rem 2rem;
+    border-radius: 1rem;
+    letter-spacing: 2px;
+    user-select: none;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#thanos-message #reset-button:hover {
+    background-color: #6070e0;
+}
+
 /* ========================================================================== */
 /* Config panel */
 /* ========================================================================== */

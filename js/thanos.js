@@ -306,7 +306,7 @@ class Sensor{
 
     checkCollisionWithRect(x, y, width, height, checkInTransition){
         let colliding = false
-        // 
+        //
         // if(checkInTransition){
         //     let polygon = this.getTansitionPolygon();
         //     colliding = collisionDetector.polygonPoint(polygon, {x, y});
@@ -500,6 +500,10 @@ class ParticleCanvas{
 
     resize(){}
 
+    destroy(){
+
+    }
+
     initialize(){
         var canvas = this;
         this.loop();
@@ -580,6 +584,7 @@ class ThanosEffect{
             speed: 0,
             precision: 20,
             reductionActivated: true,
+            resetAvailable: true,
         };
         this.options = Object.assign({}, this.defaults, options);
 
@@ -596,6 +601,7 @@ class ThanosEffect{
                 <div class="text">${this.getRandomMessage()}</div>
                 <img class="thanos-end-image" src="assets/img/thanos-wins.gif">
             </div>`);
+        this.$resetButton = $('<div id="reset-button">BACK</div>');
         this.$portalHtml = $(`<div id="portal-image">
         	<img class="img-fluid portal-img" src="assets/img/portal.gif">
         </div>`);
@@ -617,6 +623,7 @@ class ThanosEffect{
     bodyToCanvas(){
         var thanoseffect = this;
         return html2canvas(document.body).then(function(canvas) {
+            thanoseffect.photoCanvas = canvas;
             document.body.appendChild(canvas);
             $(canvas).css({
                 position: 'absolute',
@@ -634,14 +641,13 @@ class ThanosEffect{
         var left = (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0);
         var top = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0);
         console.log(this.particleCanvas);
-        var $canvas = this.particleCanvas.$canvas;
-        $canvas.css({
+        this.particleCanvas.$canvas.css({
             top: top,
             left: left,
             // backgroundColor: 'rgba(0,0,0,0.2)',
         });
-        $canvas.appendTo('body');
-        console.log($canvas);
+        this.particleCanvas.$canvas.appendTo('body');
+        console.log(this.particleCanvas.$canvas);
     }
 
     portalStep(){
@@ -676,11 +682,19 @@ class ThanosEffect{
     }
 
     thanosMessageStep(){
+        var thanoseffect = this;
         this.thanosPortalOut();
         this.$thanosMessageHtml.appendTo('body');
-        var _this = this;
+        //Append reset button if available
+        if( this.options.resetAvailable ){
+            this.$resetButton.appendTo(this.$thanosMessageHtml);
+            this.$resetButton.click(function(){
+                thanoseffect.reset();
+            });
+        }
+        this.$thanosMessageHtml.find('#reset-button');
         setTimeout(function(){
-            _this.$thanosMessageHtml.addClass('active');
+            thanoseffect.$thanosMessageHtml.addClass('active');
         }, 500);
     }
 
@@ -711,7 +725,7 @@ class ThanosEffect{
         $('html').css('overflow', 'hidden');
         this.portalStep();
 
-        setTimeout(function(){
+        this.beginningTimeout = setTimeout(function(){
             var promise = thanoseffect.bodyToCanvas();
             promise.then(function(){
                 thanoseffect.appendCanvas();
@@ -727,11 +741,24 @@ class ThanosEffect{
             if(thanoseffect.bitmap && thanoseffect.bitmap.bitmapEnded()){
                 //Si termino, limpiamos el intervalo
                 clearInterval(thanoseffect.thanosMessageInterval);
-                setTimeout(function(){//Y pasamos al step del mensaje
+                this.thanosMessageTimeout = setTimeout(function(){//Y pasamos al step del mensaje
                     thanoseffect.thanosMessageStep();
                 }, 1000);
             }
 
         }, 100);
+    }
+
+    reset(){
+        clearInterval(this.thanosMessageInterval);
+        clearTimeout(this.thanosMessageTimeout);
+        clearTimeout(this.beginningTimeout);
+        $(this.photoCanvas).remove();
+        this.photoCanvas = null;
+        $(this.particleCanvas.$canvas).remove();
+        this.particleCanvas = null;
+        this.$thanosGuantletHtml.remove();
+        this.$thanosMessageHtml.remove();
+        this.$portalHtml.remove();
     }
 }
