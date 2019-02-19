@@ -1,0 +1,145 @@
+#page-header {
+    background-color: #f9f9f9;
+}
+
+.header-logo img {
+    max-height: 7rem;
+}
+
+.header-logo {
+    text-align: center;
+}
+
+#main-content {
+    padding: 3rem 0;
+}
+
+.box-image {
+    max-height: 23rem;
+    display: block;
+    margin: 0 auto;
+    user-select: none;
+}
+
+.box-title {
+    background-color: #cf4b98;
+    color: white;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0;
+}
+
+.box-type-2 .box-title {
+    background-color: #72509a;
+}
+
+.box-type-3 .box-title {
+    background-color: #d5524e;
+}
+
+.box-type-4 .box-title {
+    background-color: #73a05b;
+}
+
+.box-type-5 .box-title {
+    background-color: #e0a140;
+}
+
+
+.content-box {
+    box-shadow: 4px 5px 9px #00000070;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.box-text {
+    padding: 1rem;
+    margin: 0;
+}
+
+#thanosTest{
+    /* border: solid 1px red; */
+    border-left: 0;
+    border-right: 0;
+}
+
+#thanos-guantlet {
+    position: fixed;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    /* opacity: 0; */
+    transition: 0.4s;
+}
+
+#thanos-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    padding-bottom: 13rem;
+    z-index: 2000;
+    font-weight: bold;
+    color: white;
+    letter-spacing: 1px;
+    font-size: 1.25rem;
+    text-align: center;
+    opacity: 0;
+    transition: 2s;
+}
+
+#thanos-message .thanos-end-image {
+    position: absolute;
+    bottom: 0;
+    opacity: 0;
+}
+
+#portal-image {
+    position: fixed;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    /* opacity: 0; */
+    transition: 0.4s;
+    filter: hue-rotate(290deg);
+}
+
+#portal-image .portal-img {
+    height: 0;
+    transition: 0.4s;
+}
+
+#portal-image .portal-img.active {
+    height: 16rem;
+}
+
+#thanos-guantlet img {
+    transition: all 0.4s;
+    opacity: 0;
+    height: 0;
+}
+
+#thanos-guantlet img.active {
+    height: 14rem;
+    opacity: 1;
+}
+
+#thanos-message.active {
+    opacity: 1;
+    padding-bottom: 2rem;
+}
