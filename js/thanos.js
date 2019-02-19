@@ -666,7 +666,7 @@ class ThanosEffect{
         this.precision = this.options.precision;
         this.particleCanvas = new ParticleCanvas(id);
         this.speed = this.options.speed;
-        this.messages = ['Your page will return', 'Your page will return cuando la pagues'];
+        this.messages = ['Your page will return'/*, 'Your page will return cuando la pagues'*/];
         this.$thanosGuantletHtml = $(`<div id="thanos-guantlet">
             	<img src="https://www.vetorial.net/~centurion/Thanos.gif">
             </div>`);
