@@ -1,4 +1,10 @@
 $(document).ready(function(){
+    var sensorMechanisms = {
+        bottomLeftToTopRight: bottomLeftToTopRight,
+        leftToRight: leftToRight,
+        topLeftToTopRight: topLeftToTopRight,
+    };
+    var thanosActivated = false;
     function run(options){
         var test = new ThanosEffect('thanosTest', options);
         test.initialize();
@@ -12,10 +18,11 @@ $(document).ready(function(){
             precision: parseInt($('#particlesPrecision').val()),
             debug: $('#thanosDebug').is(':checked'),
             resetAvailable: $('#thanosReset').is(':checked'),
+            sensorMechanism: sensorMechanisms[$('#sensorMechanism').val()],
         }
     }
 
-    var thanosActivated = false;
+
     $('.content-box').click(function(){
         let options = getData();
         if( !thanosActivated ){

@@ -70,6 +70,16 @@ var collisionDetector = {
             return true;
         }
         return false;
+    },
+    rectRect: function(rect1, rect2) {
+        // are the sides of one rectangle touching the other?
+        if (rect1.x + rect1.width >= rect2.x &&    // r1 right edge past r2 left
+          rect1.x <= rect2.x + rect2.width &&    // r1 left edge past r2 right
+          rect1.y + rect1.height >= rect2.y &&    // r1 top edge past r2 bottom
+          rect1.y <= rect2.y + rect2.height) {    // r1 bottom edge past r2 top
+            return true;
+        }
+        return false;
     }
 }
 
@@ -151,78 +161,63 @@ class Sensor{
             useEndPoint: false,
             drawPolygon: true,
             polygonColor: 'rgba(0, 255, 0, 0.5)',
+            mechanism: bottomLeftToTopRight,
         };
-        this.info = Object.assign({}, this.defaults, options);
+        this.options = Object.assign({}, this.defaults, options);
         this.oldPosition = {
-            x: this.info.x,
-            y: this.info.y,
-            endX: this.info.endX,
-            endY: this.info.endY,
+            x: this.options.x,
+            y: this.options.y,
+            endX: this.options.endX,
+            endY: this.options.endY,
         }
     }
 
     getEndPoint(){
         let endpoint = null;
-        if ( this.info.useEndPoint ){
+        if ( this.options.useEndPoint ){
             endpoint = {
-                x: this.info.endX,
-                y: this.info.endY,
+                x: this.options.endX,
+                y: this.options.endY,
             };
         }
         else {
             endpoint = {
-                x: Math.sin( this.info.angle ) * this.info.length,
-                y: Math.cos( this.info.angle ) * this.info.length,
+                x: Math.sin( this.options.angle ) * this.options.length,
+                y: Math.cos( this.options.angle ) * this.options.length,
             };
         }
         return endpoint;
     }
 
-    draw(ctx){
-        if(this.info.dontDraw)
-            return;
-
-        let endpoint = this.getEndPoint();
-        ctx.strokeStyle = this.info.color;
-        ctx.beginPath();
-        ctx.moveTo(this.info.x, this.info.y);
-        ctx.lineTo(endpoint.x, endpoint.y);
-        ctx.stroke();
-        this.drawTransitionPolygon(ctx);
-    }
-
-    update(){
-        if( !this.info.dontUpdate )
-            return;
-        this.x += this.sx;
-        this.y += this.sy;
-        if ( this.info.useEndPoint ){
-            this.endX += this.sx;
-            this.endY += this.sy;
-        }
-    }
-
     changePosition(data){
         this.oldPosition = {
-            x: this.info.x,
-            y: this.info.y,
-            endX: this.info.endX,
-            endY: this.info.endY,
+            x: this.options.x,
+            y: this.options.y,
+            endX: this.options.endX,
+            endY: this.options.endY,
         }
 
-        this.info.x = data.x;
-        this.info.y = data.y;
-        this.info.endY = data.endY;
-        this.info.endX = data.endX;
+        if( typeof data.x != "undefined" )
+            this.options.x = data.x;
+        if( typeof data.y != "undefined" )
+            this.options.y = data.y;
+        if( typeof data.endY != "undefined" )
+            this.options.endY = data.endY;
+        if( typeof data.endX != "undefined" )
+            this.options.endX = data.endX;
+    }
+
+    isFinished(ctx, duration){
+        return this.options.mechanism.isFinished(this, ctx, duration);
     }
 
     checkCollisionBefore(a, b){
         let x1 = 0;
-        let y1 = this.info.y;
-        let x2 = this.info.endX;
-        let y2 = this.info.endY;
+        let y1 = this.options.y;
+        let x2 = this.options.endX;
+        let y2 = this.options.endY;
         let x3 = 0;
-        let y3 = this.info.endY;
+        let y3 = this.options.endY;
         let collision = false;
 
         if( collisionDetector.trianglePoint(x1, y1, x2, y2, x3, y3, a, b) )
@@ -232,10 +227,10 @@ class Sensor{
     }
 
     checkTransitionCollisionLine(x, y, endX, endY){
-        let sideA = {x: this.info.x, y: this.info.y, endX: this.oldPosition.x, endY: this.oldPosition.y};
-        let sideB = {x: this.info.x, y: this.info.y, endX: this.info.endX, endY: this.info.endY};
+        let sideA = {x: this.options.x, y: this.options.y, endX: this.oldPosition.x, endY: this.oldPosition.y};
+        let sideB = {x: this.options.x, y: this.options.y, endX: this.options.endX, endY: this.options.endY};
         let sideC = {x: this.oldPosition.x, y: this.oldPosition.y, endX: this.oldPosition.endX, endY: this.oldPosition.endY};
-        let sideD = {x: this.oldPosition.endX, y: this.oldPosition.endY, endX: this.info.endX, endY: this.info.endY};
+        let sideD = {x: this.oldPosition.endX, y: this.oldPosition.endY, endX: this.options.endX, endY: this.options.endY};
         let line = {
             x: x,
             y: y,
@@ -258,10 +253,10 @@ class Sensor{
     checkCollisionWithLine(x, y, endX, endY, checkInTransition){
         let colliding = false;
         colliding = collisionDetector.lineLine({
-            x: this.info.x,
-            y: this.info.y,
-            endX: this.info.endX,
-            endY: this.info.endY,
+            x: this.options.x,
+            y: this.options.y,
+            endX: this.options.endX,
+            endY: this.options.endY,
         }, {
             x: x,
             y: y,
@@ -277,11 +272,11 @@ class Sensor{
 
     getTansitionPolygon(){
         return [{
-            x: this.info.x,
-            y: this.info.y,
+            x: this.options.x,
+            y: this.options.y,
         },{
-            x: this.info.endX,
-            y: this.info.endY,
+            x: this.options.endX,
+            y: this.options.endY,
         },{
             x: this.oldPosition.endX,
             y: this.oldPosition.endY,
@@ -298,54 +293,50 @@ class Sensor{
         ctx.lineTo(vertices[1].x,vertices[1].y);
         ctx.lineTo(vertices[2].x,vertices[2].y);
         ctx.lineTo(vertices[3].x,vertices[3].y);
-        if(this.info.drawPolygon){
-            ctx.fillStyle = this.info.polygonColor;
+        if(this.options.drawPolygon){
+            ctx.fillStyle = this.options.polygonColor;
             ctx.fill();
         }
     }
 
-    checkCollisionWithRect(x, y, width, height, checkInTransition){
-        let colliding = false
-        //
-        // if(checkInTransition){
-        //     let polygon = this.getTansitionPolygon();
-        //     colliding = collisionDetector.polygonPoint(polygon, {x, y});
-        //     // if(colliding)
-        //     //     console.log(colliding);
+    checkCollisionWithRect(particle, checkInTransition){
+        return this.options.mechanism.collisionWithParticle(this, particle);
+    }
+
+    initialize(ctx){
+        this.options.mechanism.initialize(this, ctx);
+    }
+
+    draw(ctx){
+        if(this.options.dontDraw)
+            return;
+
+        let endpoint = this.getEndPoint();
+        ctx.strokeStyle = this.options.color;
+        ctx.beginPath();
+        ctx.moveTo(this.options.x, this.options.y);
+        ctx.lineTo(endpoint.x, endpoint.y);
+        ctx.stroke();
+        this.drawTransitionPolygon(ctx);
+    }
+
+    update(ctx, duration){
+        if(this.options.dontUpdate)
+            return;
+
+        this.options.mechanism.update(this, ctx, duration);
+        // this.x += this.sx;
+        // this.y += this.sy;
+        // if ( this.options.useEndPoint ){
+        //     this.endX += this.sx;
+        //     this.endY += this.sy;
         // }
-        //
-        // if(colliding)
-        //     return colliding;
-        //
-        // let rect = {
-        //     x: x,
-        //     y: y,
-        //     width: width,
-        //     height: height,
-        // };
-        //
-        // colliding = collisionDetector.lineRect({
-        //     x: this.info.x,
-        //     y: this.info.y,
-        //     endX: this.info.endX,
-        //     endY: this.info.endY,
-        // }, rect);
-        //
-        // if(colliding)
-        //     return colliding;
-
-        //If it hasnt collided in the previous checks, lets see in the traingle
-        //area formed by the sensor and the canvas
-        colliding = this.checkCollisionBefore(x, y);
-
-        return colliding;
     }
 
     setInfo(newInfo){
-        this.info = Object.assign({}, this.info, newInfo);
+        this.options = Object.assign({}, this.options, newInfo);
     }
 }
-
 
 class ParticleCanvas{
     constructor(id, config){
@@ -359,6 +350,8 @@ class ParticleCanvas{
             sensorDuration: 50,
             onlyBackground: false,//True => only shows the black cells left behind by the particles
             debug: false,
+            stopSensorOnFinish: false,
+            sensorMechanism: bottomLeftToTopRight,
         };
         this.options = Object.assign({}, this.options, config);
         this.setUpSensor();
@@ -371,16 +364,13 @@ class ParticleCanvas{
 
     setUpSensor(){
         this.sensor = new Sensor({
-            x: 0,
-            y: this.canvas.height,
-            endX: 0,
-            endY: this.canvas.height,
-            speed: 0,
             color: 'lime',
-            dontUpdate: true,
+            dontUpdate: false,
             dontDraw: !this.options.debug,
             useEndPoint: true,
+            mechanism: this.options.sensorMechanism,
         });
+        this.sensor.initialize(this.ctx);
     }
 
     //Crea el canvas y guarda el context 2d
@@ -451,7 +441,12 @@ class ParticleCanvas{
                 canvas.destroyParticle(particle, index);
                 return;
             }
-            let collision = canvas.sensor.checkCollisionWithRect(particle.x, particle.y, particle.width, particle.height, true);
+            let collision = canvas.sensor.checkCollisionWithRect({
+                x: particle.x,
+                y: particle.y,
+                width: particle.width,
+                height: particle.height,
+            }, true);
             if(collision){
                 //console.log(collision);
                 particle.replacementParticle.options.dontDraw = false;
@@ -466,7 +461,7 @@ class ParticleCanvas{
 
     draw(){
         //Key
-        if( this.options.advanceFramesWithKey && !this.states.advKeyPressed ){
+        if( this.dontDraw || (this.options.advanceFramesWithKey && !this.states.advKeyPressed) ){
             return;
         }
         this.states.advKeyPressed = false;
@@ -475,22 +470,16 @@ class ParticleCanvas{
         this.clear();
         this.drawBackgroundParticles();
         this.drawParticles();
-        this.sensor.draw(this.ctx);
-        this.updateSensor();
+
+        if( this.options.debug )
+            this.sensor.draw(this.ctx);
+
+        if( !this.options.stopSensorOnFinish || !this.sensorFinished() )
+            this.sensor.update(this.ctx, this.options.sensorDuration);
     }
 
-    updateSensor(){
-        var endxIncrement = this.canvas.width / this.options.sensorDuration;
-        var yIncrement = this.canvas.height / this.options.sensorDuration;
-        var newEndX = this.sensor.info.endX + endxIncrement;
-        var newY = this.sensor.info.y - yIncrement;
-
-        this.sensor.changePosition({
-            x: 0,
-            y: newY,
-            endX: newEndX,
-            endY: this.canvas.height,
-        });
+    sensorFinished(){
+        return this.sensor.isFinished(this.ctx, this.options.sensorDuration);
     }
 
     update(){
@@ -501,7 +490,11 @@ class ParticleCanvas{
     resize(){}
 
     destroy(){
-
+        this.particles = [];
+        this.destroyedParticles = [];
+        this.replacements = [];
+        this.$canvas.remove();
+        this.dontDraw = true;
     }
 
     initialize(){
@@ -593,7 +586,7 @@ class ThanosEffect{
         this.precision = this.options.precision;
         this.particleCanvas = new ParticleCanvas(id, this.options);
         this.speed = this.options.speed;
-        this.messages = ['Your page will return'/*, 'Your page will return cuando la pagues'*/];
+        this.messages = ['Your page will return'];
         this.$thanosGuantletHtml = $(`<div id="thanos-guantlet">
             	<img src="assets/img/thanos-attacks.gif">
             </div>`);
@@ -722,6 +715,7 @@ class ThanosEffect{
 
     initialize(){
         var thanoseffect = this;
+        this.htmlOldOverflow = $('html').css('overflow');
         $('html').css('overflow', 'hidden');
         this.portalStep();
 
@@ -738,12 +732,12 @@ class ThanosEffect{
 
         //Checkeamos en un intervalo si termino la animacion del bitmap
         this.thanosMessageInterval = setInterval(function(){
-            if(thanoseffect.bitmap && thanoseffect.bitmap.bitmapEnded()){
+            if(thanoseffect.particleCanvas && thanoseffect.particleCanvas.sensorFinished()){
                 //Si termino, limpiamos el intervalo
                 clearInterval(thanoseffect.thanosMessageInterval);
                 this.thanosMessageTimeout = setTimeout(function(){//Y pasamos al step del mensaje
                     thanoseffect.thanosMessageStep();
-                }, 1000);
+                }, 200);
             }
 
         }, 100);
@@ -755,10 +749,11 @@ class ThanosEffect{
         clearTimeout(this.beginningTimeout);
         $(this.photoCanvas).remove();
         this.photoCanvas = null;
-        $(this.particleCanvas.$canvas).remove();
+        this.particleCanvas.destroy();
         this.particleCanvas = null;
         this.$thanosGuantletHtml.remove();
         this.$thanosMessageHtml.remove();
         this.$portalHtml.remove();
+        $('html').css('overflow', this.htmlOldOverflow);
     }
 }

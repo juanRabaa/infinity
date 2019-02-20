@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="js/libs/html2canvas.min.js"></script>
+    <script src="js/sensorTypes.js"></script>
     <script src="js/thanos.js"></script>
     <script src="js/main.js"></script>
 </head>
@@ -30,24 +31,34 @@
                 <div class="container">
                     <div class="row">
                         <div class="form-group col-12 col-md-6">
-                            <label for="sensorDuration">Duration</label>
+                            <label for="sensorDuration">Animation duration</label>
                             <input min=1 type="number" class="form-control" id="sensorDuration" value="50">
                         </div>
                         <div class="form-group col-12 col-md-6">
-                            <label for="particlesSpeed">Speed</label>
+                            <label for="particlesSpeed">Particles Speed</label>
                             <input min=0 type="number" class="form-control" id="particlesSpeed" value="1000">
                         </div>
                         <div class="form-group col-12 col-md-6">
                             <label for="particlesPrecision">Particles size</label>
                             <input min=5 type="number" class="form-control" id="particlesPrecision" value="10">
                         </div>
-                        <div class="form-group col-12">
-                            <input type="checkbox" class="form-check-input" id="thanosDebug">
-                            <label class="form-check-label" for="thanosDebug">Debug</label>
+                        <div class="form-group col-12 col-md-6">
+                            <label for="sensorMechanism">Animation type</label>
+                            <select class="form-control" id="sensorMechanism">
+                                <option selected value="bottomLeftToTopRight">Bottom left corner to top right corner</option>
+                                <option value="leftToRight">Left to right</option>
+                                <option value="topLeftToTopRight">Top left corner to top right corner</option>
+                            </select>
                         </div>
-                        <div class="form-group col-12">
-                            <input checked type="checkbox" class="form-check-input" id="thanosReset">
-                            <label class="form-check-label" for="thanosReset">Enable reset button at the end of animation</label>
+                        <div class="col-12">
+                            <div class="form-group col-12">
+                                <input type="checkbox" class="form-check-input" id="thanosDebug">
+                                <label class="form-check-label" for="thanosDebug">Debug</label>
+                            </div>
+                            <div class="form-group col-12">
+                                <input checked type="checkbox" class="form-check-input" id="thanosReset">
+                                <label class="form-check-label" for="thanosReset">Enable reset button at the end of animation</label>
+                            </div>
                         </div>
                     </div>
                 </div>
