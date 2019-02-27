@@ -1,4 +1,6 @@
 $(document).ready(function(){
+    ThanosEffect.preloadAssets();
+
     var sensorMechanisms = {
         bottomLeftToTopRight: bottomLeftToTopRight,
         leftToRight: leftToRight,

@@ -104,10 +104,14 @@ var topLeftToTopRight = {
         let yIncrement = canvas.height / duration;
         let newEndY = canvas.height;
         let newEndX = sensor.options.endX;
+        let newY = sensor.options.y;
 
         //If the endX reached the end of the canvas width, increase endY
         if( sensor.options.endX >= canvas.width ){
             newEndY = sensor.options.endY - yIncrement;
+            // if( sensor.options.endY < 0 ){
+            //     newY  = newY - yIncrement;
+            // }
         }
         //If the endX hasn't reach the canvas width + something (just in case) increase endX
         if( sensor.options.endX < canvas.width * 100 ){
@@ -117,7 +121,7 @@ var topLeftToTopRight = {
         //console.log(newEndY);
         sensor.changePosition({
             x: 0,
-            y: 0,
+            y: newY,
             endX: newEndX,
             endY: newEndY,
         });

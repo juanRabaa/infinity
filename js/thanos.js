@@ -441,12 +441,14 @@ class ParticleCanvas{
                 canvas.destroyParticle(particle, index);
                 return;
             }
-            let collision = canvas.sensor.checkCollisionWithRect({
+
+            let collision = canvas.sensorFinished() ? true : canvas.sensor.checkCollisionWithRect({
                 x: particle.x,
                 y: particle.y,
                 width: particle.width,
                 height: particle.height,
             }, true);
+
             if(collision){
                 //console.log(collision);
                 particle.replacementParticle.options.dontDraw = false;
@@ -600,6 +602,15 @@ class ThanosEffect{
         </div>`);
 
         console.log(this.particleCanvas);
+    }
+
+    static preloadAssets() {
+        let assets = ['assets/img/thanos-wins.gif', 'assets/img/thanos-attacks.gif', 'assets/img/portal.gif'];
+        assets.forEach(function(src){
+            let img = new Image();
+            console.log('Asset cargado', img);
+            img.src = src;
+        });
     }
 
     getRandomMessage(){
