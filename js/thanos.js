@@ -93,9 +93,13 @@ class Particle{
             color: 'black',
             reductionRatio: 0,
             reductionActivated: false,
+            opacityIncrement: false,
+            initialOpacity: 0,
+            currentOpacity: 0,
+            colorChange: false,
+            colorChangePercentage: 0,
         };
         this.options = Object.assign({}, this.defaults, options);
-
         this.color = this.options.color;
         this.sx = this.options.sx;
         this.sy = this.options.sy;
@@ -103,12 +107,15 @@ class Particle{
         this.height = h;
         this.x = x;
         this.y = y;
+        this.initialX = x;
+        this.initialY = y;
     }
 
     draw(ctx){
         if( this.options.dontDraw )
             return;
         ctx.fillStyle = this.color;
+        //console.log(this.color);
         ctx.fillRect(this.x, this.y, this.width, this.height);
         this.update();
     }
@@ -116,6 +123,17 @@ class Particle{
     update(){
         if( this.options.dontUpdate )
             return;
+
+        if( this.options.opacityIncrement && this.options.currentOpacity >= 0 && this.options.currentOpacity <= 1){
+            this.options.currentOpacity += 1;
+            this.color = `rgba(0,0,0, ${this.options.currentOpacity})`;
+        }
+
+        if( this.options.colorChange && (this.options.colorChangePercentage >= 0 || this.options.colorChangePercentage <= 100) ){
+            let newColor = colorBetween(this.color, this.options.colorChange, this.options.colorChangePercentage, this.initialX == 0);
+            this.options.colorChangePercentage = this.options.colorChangePercentage + 0.2 ;
+            this.color = newColor;
+        }
 
         this.updateReductionStatus();
         this.x += this.sx;
@@ -403,6 +421,11 @@ class ParticleCanvas{
             sx: 0,
             sy: 0,
             color: 'black',
+            colorChange: false,
+            opacityIncrement: true,
+            dontUpdate: false,
+            reductionRatio: 0,
+            reductionActivated: false,
         });
         var backgroundParticle = new Particle(data.x, data.y, data.w, data.h, backgroundData);
         particle.replacementParticle = backgroundParticle;
@@ -706,8 +729,9 @@ class ThanosEffect{
         //console.log(bitData)
         var speedMultiplier = this.options.speed / 1000;
         var speedX = (Math.random() * 5 + 2) * speedMultiplier;
-        var speedY = (-1 * (Math.random() * 10 + 2)) * speedMultiplier;
-        var reductionRatio = Math.random() * bitData.precision/10 + 0.5;
+        var speedY = (-1 * (Math.random() * 1 + 2)) * speedMultiplier;
+        var reductionRatio = Math.random() * (bitData.precision/1) + (bitData.precision / 1000);
+
         //console.log(reductionRatio);
         this.particleCanvas.addParticle({
             x: bitData.x,
@@ -719,6 +743,7 @@ class ThanosEffect{
             reductionRatio: reductionRatio,
             reductionActivated: true,
             color: `rgb(${bitData.data[0]},${bitData.data[1]},${bitData.data[2]})`,
+            colorChange: 'rgb(68, 68, 68)',
             dontUpdate: true,
             dontDraw: true,
         });
